@@ -94,7 +94,7 @@ int Cli_Send(char* buffer, int length)
 
 		return RETURN_ERR;
 	}
-
+    printf("client send data : %s\n",buffer);
 	return RETURN_OK;
 }
 
@@ -103,13 +103,13 @@ int Cli_proc_buffer(char* buffer, int buffer_size)
     char content[100] = {0};
     time_t  tp;
     time(&tp);
-
     sprintf(content, "recv %d date %s.",*((int*)buffer),ctime(&tp));
-    printf("in Client==> get date %s",buffer+sizeof(int));
-    printf("in Client==> wait 1s");
-    sleep(1);
-        
+
+    char* ptr = buffer+4;
+    printf("in Cli_proc_buffer==>{%s},wait 1s\n",buffer+sizeof(int));
+
     Cli_Send(content,strlen(content)+1);
+    sleep(1);
 
     return RETURN_OK;
 }
@@ -127,7 +127,7 @@ int Cli_Thread_Fun()
             if(RETURN_ERR==Cli_Socket_Init())
                 goto END_LOOP;
 
-printf("client socket OK %d.\n",cli_socket);
+printf("client socket init success, socket is %d.\n",cli_socket);
     	FD_ZERO(&set_fd);
     	FD_SET(cli_socket, &set_fd);
 
@@ -146,8 +146,8 @@ printf("client socket OK %d.\n",cli_socket);
                     Cli_Sock_Recv(buffer, BUFFER_SIZE);
                     Cli_proc_buffer(buffer,BUFFER_SIZE);
                 }
-printf("client receive date and return .");            
-return ;                
+printf("client receive date and return .\n");
+return ;
         }
 END_LOOP:
 printf("client endloop wait 10s...\n");
@@ -175,9 +175,9 @@ int Cli_Sock_Recv(char* buffer, int buffer_len)
 		if ( 0 == ret || -1 == ret )
 		{
 			if (ret == 0)
-				printf("failed when recv in Serv_Sock_Recv: ret = 0.\r\n");
+				printf("failed when recv in cli_Sock_Recv: ret = 0.\r\n");
 			else
-				printf("Failed when recv in Serv_Sock_Recv: socket err.\r\n");
+				printf("Failed when recv in cli_Sock_Recv: socket err.\r\n");
 
 			return RETURN_ERR;
 		}
@@ -189,15 +189,22 @@ int Cli_Sock_Recv(char* buffer, int buffer_len)
 			expect_len = 0;
 
 		if(total_len>=sizeof(int) && 0==total_len_geted)
-		{
-			printf("receive %d bytes.\r\n",*(int*)buffer_pos);
 			total_len_geted = 1;
-		}
-
 
 		if (expect_len == 0 && total_len_geted == 1)
 		{
-			printf("Get data \n");
+			printf("***********************************\n");
+            printf("receive %d bytes.\r\n",*(int*)buffer_pos);
+            printf("%s\n",buffer_pos+4);
+			printf("***********************************\n");
+            
+#if  0           
+    char* ptr = buffer+4;
+    do{
+        printf("%c",*ptr);
+        ptr++;
+    }while(*ptr);            
+#endif    
 			return RETURN_OK;
 		}
 
@@ -207,7 +214,10 @@ int Cli_Sock_Recv(char* buffer, int buffer_len)
 int Socket_Close(int* sockfd)
 {
 	if (*sockfd != INVALID_SOCKET)
-		close(*sockfd);
+	{
+        close(*sockfd);
+        printf("close socket %d\n",*sockfd);
+	}
 
 	*sockfd = INVALID_SOCKET;
 

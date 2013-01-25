@@ -25,8 +25,11 @@ static int serv_socket = INVALID_SOCKET;
 int Socket_Close(int* sockfd)
 {
 	if (*sockfd != INVALID_SOCKET)
-		close(*sockfd);
-
+	{
+        close(*sockfd);
+        printf("close socket %d\n",*sockfd);
+	}
+    
 	*sockfd = INVALID_SOCKET;
 
 	return RETURN_OK;
@@ -153,15 +156,14 @@ int Serv_Sock_Recv(char* buffer, int buffer_len)
 			expect_len = 0;
 
 		if(total_len>=sizeof(int) && 0==total_len_geted)
-		{
-			printf("receive %d bytes.\r\n",*(int*)buffer_pos);
 			total_len_geted = 1;
-		}
-
 
 		if (expect_len == 0 && total_len_geted == 1)
 		{
-			printf("Get data \n");
+			printf("***********************************\n");
+            printf("receive %d bytes.\r\n",*(int*)buffer_pos);
+            printf("%s\n",buffer_pos+4);
+			printf("***********************************\n");
 			return RETURN_OK;
 		}
 
@@ -176,11 +178,10 @@ int Ser_proc_buffer(char* buffer, int buffer_size)
     time(&tp);
 
     sprintf(content, "recv %d date %s.",*((int*)buffer),ctime(&tp));
-    printf("in Service==> get date %s",buffer+sizeof(int));
-    printf("in Service==> wait 1s");
-    sleep(1);
+    printf("in Ser_proc_buffer==>{%s}. wait 1s\n",buffer+sizeof(int));
 
     Serv_Send(content,strlen(content)+1);
+    sleep(1);
 
     return RETURN_OK;
 }
@@ -199,7 +200,7 @@ int Serv_Thread_Fun()
         if (serv_main_socket == INVALID_SOCKET)
             if(RETURN_ERR == Serv_Socket_Init())
                 goto END_LOOP;
-printf("Service main socket is %d.\n",serv_main_socket);
+printf("Service init success, socket is %d.\n",serv_main_socket);
     	FD_ZERO(&set_fd);
     	FD_SET(serv_main_socket, &set_fd);
 
@@ -218,7 +219,7 @@ printf("Service main socket is %d.\n",serv_main_socket);
                     result = Serv_Sock_Accept();
                     if(result == RETURN_ERR)
                         goto END_LOOP;
-printf("Service socket is %d.\n",serv_socket);                    
+printf("Service connect success, socket is %d.\n",serv_socket);                    
                     Serv_Send("i have send data.",18);
                     while(1)
                     {
@@ -228,6 +229,8 @@ printf("Service socket is %d.\n",serv_socket);
                         Ser_proc_buffer(buffer,BUFFER_SIZE);
                         
                     }
+printf("Service disconnect  return.\n");
+return;
                 }
         }
 END_LOOP:
@@ -280,7 +283,7 @@ int Serv_Send(char* buffer, int length)
 
 		return RETURN_ERR;
 	}
-
+    printf("service send data : %s\n",buffer);
 	return RETURN_OK;
 }
 
