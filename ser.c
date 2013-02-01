@@ -127,15 +127,14 @@ int Serv_Sock_Accept()
 
 int Serv_Sock_Recv(char* buffer, int buffer_len)
 {
-    int ret = -1;
-	int total_len = 0;
 	// when send buffers will send the length of buffer.so will receive sizeof(int) bytes.
-	int expect_len = sizeof(int);	
-	int total_len_geted = 0;
-
-	unsigned char* buffer_pos = buffer;
+	int             expect_len = sizeof(int);	
+    int             ret = -1;
+	int             total_len = 0;
+	int             total_len_geted = 0;
+	unsigned char*  buffer_pos = buffer;
+    
     memset(buffer, 0, buffer_len);
-
 	while(1)
 	{
 		ret = recv(serv_socket, buffer+total_len,expect_len, 0);
@@ -145,6 +144,11 @@ int Serv_Sock_Recv(char* buffer, int buffer_len)
 				printf("failed when recv in Serv_Sock_Recv: ret = 0.\r\n");
 			else
 				printf("Failed when recv in Serv_Sock_Recv: socket err.\r\n");
+
+            ret = 0;
+            total_len = 0;
+            expect_len = sizeof(int);
+            total_len_geted = 0;
 
 			return RETURN_ERR;
 		}
@@ -156,14 +160,13 @@ int Serv_Sock_Recv(char* buffer, int buffer_len)
 			expect_len = 0;
 
 		if(total_len>=sizeof(int) && 0==total_len_geted)
-			total_len_geted = 1;
-
+		{
+            total_len_geted = 1;
+            expect_len = *(int*)buffer_pos;
+		}
+        
 		if (expect_len == 0 && total_len_geted == 1)
 		{
-			printf("***********************************\n");
-            printf("receive %d bytes.\r\n",*(int*)buffer_pos);
-            printf("%s\n",buffer_pos+4);
-			printf("***********************************\n");
 			return RETURN_OK;
 		}
 
@@ -173,10 +176,10 @@ int Serv_Sock_Recv(char* buffer, int buffer_len)
 
 int Ser_proc_buffer(char* buffer, int buffer_size)
 {
-    char content[100] = {0};
     time_t  tp;
+    char    content[100] = {0};
+    
     time(&tp);
-
     sprintf(content, "recv %d date %s.",*((int*)buffer),ctime(&tp));
     printf("in Ser_proc_buffer==>{%s}. wait 1s\n",buffer+sizeof(int));
 
@@ -191,9 +194,9 @@ int Ser_proc_buffer(char* buffer, int buffer_size)
 int Serv_Thread_Fun()
 {
     int     result = 0;
-    fd_set  set_fd;
     char    buffer[BUFFER_SIZE] = {0};
-    struct timeval timeout = {3,0};
+    fd_set  set_fd;
+    struct  timeval timeout = {3,0};
     
     while(1)
     {
@@ -229,8 +232,8 @@ printf("Service connect success, socket is %d.\n",serv_socket);
                         Ser_proc_buffer(buffer,BUFFER_SIZE);
                         
                     }
-printf("Service disconnect  return.\n");
-return;
+                    //printf("Service disconnect  return.\n");
+                    //return;
                 }
         }
 END_LOOP:
@@ -283,7 +286,6 @@ int Serv_Send(char* buffer, int length)
 
 		return RETURN_ERR;
 	}
-    printf("service send data : %s\n",buffer);
 	return RETURN_OK;
 }
 

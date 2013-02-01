@@ -3,7 +3,6 @@
 #include "netinet/in.h"
 
 
-
 #define CLI_IP          "127.0.0.1"
 #define CLI_PORT        4798
 #define RETURN_OK       0
@@ -16,42 +15,42 @@ static int cli_socket = INVALID_SOCKET;
 
 int Cli_Socket_Init()
 {
-	struct sockaddr_in 	cli_Addr;
+    struct sockaddr_in 	cli_Addr;
     int result = 0;
 
     if (cli_socket != INVALID_SOCKET)
         return RETURN_OK;
     
-	cli_socket = socket(AF_INET, SOCK_STREAM, 0);
-	if( INVALID_SOCKET == cli_socket)
-	{
-		perror("socket error : ");
-		goto ERR;
-	}
-
-	cli_Addr.sin_family = AF_INET;
-	cli_Addr.sin_port = htons(CLI_PORT);
-	cli_Addr.sin_addr.s_addr = inet_addr(CLI_IP);
-	if (INADDR_NONE == cli_Addr.sin_addr.s_addr)
-	{
-		perror("inet_addr error :");
-		goto ERR;
-	}
-
-    result = connect ( cli_socket, ( struct sockaddr * ) & cli_Addr, sizeof (cli_Addr) );
-    if ( result == -1 )
+    cli_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if( INVALID_SOCKET == cli_socket)
     {
-		perror("connect error :");
+        perror("socket error : ");
         goto ERR;
     }
 
-	return RETURN_OK;
+    cli_Addr.sin_family = AF_INET;
+    cli_Addr.sin_port = htons(CLI_PORT);
+    cli_Addr.sin_addr.s_addr = inet_addr(CLI_IP);
+    if (INADDR_NONE == cli_Addr.sin_addr.s_addr)
+    {
+        perror("inet_addr error :");
+        goto ERR;
+    }
+
+    result = connect ( cli_socket, (struct sockaddr * ) & cli_Addr, sizeof (cli_Addr) );
+    if ( result == -1 )
+    {
+        perror("connect error :");
+        goto ERR;
+    }
+
+    return RETURN_OK;
 
 ERR:
-	if(INVALID_SOCKET != cli_socket)
-		Socket_Close(&cli_socket);
+    if(INVALID_SOCKET != cli_socket)
+        Socket_Close(&cli_socket);
 
-	return RETURN_ERR;
+    return RETURN_ERR;
 }
 
 int Send_Date(int sockfd, char* buffer, int length)
@@ -94,7 +93,6 @@ int Cli_Send(char* buffer, int length)
 
 		return RETURN_ERR;
 	}
-    printf("client send data : %s\n",buffer);
 	return RETURN_OK;
 }
 
@@ -103,9 +101,8 @@ int Cli_proc_buffer(char* buffer, int buffer_size)
     char content[100] = {0};
     time_t  tp;
     time(&tp);
-    sprintf(content, "recv %d date %s.",*((int*)buffer),ctime(&tp));
 
-    char* ptr = buffer+4;
+    sprintf(content, "recv %d date %s.",*((int*)buffer),ctime(&tp));
     printf("in Cli_proc_buffer==>{%s},wait 1s\n",buffer+sizeof(int));
 
     Cli_Send(content,strlen(content)+1);
@@ -117,9 +114,9 @@ int Cli_proc_buffer(char* buffer, int buffer_size)
 int Cli_Thread_Fun()
 {
     int     result = 0;
-    fd_set  set_fd;
     char    buffer[BUFFER_SIZE] = {0};
-    struct timeval timeout = {3,0};
+    fd_set  set_fd;
+    struct  timeval timeout = {3,0};
     
     while(1)
     {
@@ -128,8 +125,8 @@ int Cli_Thread_Fun()
                 goto END_LOOP;
 
 printf("client socket init success, socket is %d.\n",cli_socket);
-    	FD_ZERO(&set_fd);
-    	FD_SET(cli_socket, &set_fd);
+        FD_ZERO(&set_fd);
+        FD_SET(cli_socket, &set_fd);
 
         result = select(cli_socket+1, &set_fd, (fd_set *) 0, (fd_set *) 0, &timeout);
         if ( result < 0 )
@@ -140,14 +137,14 @@ printf("client socket init success, socket is %d.\n",cli_socket);
 
         else
         {
-            if (cli_socket >= 0)
-                if(FD_ISSET(cli_socket,&set_fd))
-                {
-                    Cli_Sock_Recv(buffer, BUFFER_SIZE);
-                    Cli_proc_buffer(buffer,BUFFER_SIZE);
-                }
-printf("client receive date and return .\n");
-return ;
+            if (cli_socket >= 0 && FD_ISSET(cli_socket,&set_fd))
+            {
+                Cli_Sock_Recv(buffer, BUFFER_SIZE);
+                Cli_proc_buffer(buffer,BUFFER_SIZE);
+
+                continue;
+            }
+
         }
 END_LOOP:
 printf("client endloop wait 10s...\n");
@@ -158,12 +155,12 @@ sleep(10);
 
 int Cli_Sock_Recv(char* buffer, int buffer_len)
 {
-    int ret = -1;
-	int total_len = 0;
 	// when send buffers will send the length of buffer.so will receive sizeof(int) bytes.
-	int expect_len = sizeof(int);	
-	int total_len_geted = 0;
-	unsigned char* buffer_pos = buffer;
+	int             expect_len = sizeof(int);	
+    int             ret = -1;
+	int             total_len = 0;
+	int             total_len_geted = 0;
+	unsigned char*  buffer_pos = buffer;
 
     if (cli_socket == INVALID_SOCKET)
         return RETURN_ERR;
@@ -189,56 +186,46 @@ int Cli_Sock_Recv(char* buffer, int buffer_len)
 			expect_len = 0;
 
 		if(total_len>=sizeof(int) && 0==total_len_geted)
-			total_len_geted = 1;
-
-		if (expect_len == 0 && total_len_geted == 1)
 		{
-			printf("***********************************\n");
-            printf("receive %d bytes.\r\n",*(int*)buffer_pos);
-            printf("%s\n",buffer_pos+4);
-			printf("***********************************\n");
-            
-#if  0           
-    char* ptr = buffer+4;
-    do{
-        printf("%c",*ptr);
-        ptr++;
-    }while(*ptr);            
-#endif    
-			return RETURN_OK;
+            total_len_geted = 1;
+            expect_len = *(int*)buffer_pos;
 		}
 
-	}
+		if (expect_len == 0 && total_len_geted == 1)
+        { 
+            return RETURN_OK;
+        }
+
+    }
 }
 
 int Socket_Close(int* sockfd)
 {
 	if (*sockfd != INVALID_SOCKET)
-	{
+    {
         close(*sockfd);
         printf("close socket %d\n",*sockfd);
-	}
+    }
 
-	*sockfd = INVALID_SOCKET;
+    *sockfd = INVALID_SOCKET;
 
-	return RETURN_OK;
+    return RETURN_OK;
 }
 
 
 int Socket_Destory()
 {
-	Socket_Close(&cli_socket);
-
-	return RETURN_OK;
+    Socket_Close(&cli_socket);
+    return RETURN_OK;
 }
 
 
 
 int main()
 {
-	int ret ;
+    int ret ;
     Cli_Socket_Init();
-	Cli_Thread_Fun();
+    Cli_Thread_Fun();
     
 	return 1;
 }
